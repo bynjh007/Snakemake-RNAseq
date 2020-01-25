@@ -1,0 +1,116 @@
+################################################################################
+### Data description
+# PDX data (host: mouse, graft: human)
+# paired-end sequencing data
+# read length : could be different depending on the study
+# strand-specific : unstranded
+# watch out the parameters of cutadapt/star/rsem/featureCounts based on the above information
+
+# because data of interest is TCGA, star 1pass can be used with CTAT library
+# for SJ junctions
+################################################################################
+
+
+# quant_tool - 'RSEM', 'HTSeq', 'featureCounts'
+options:
+    pdx: True
+    bam2fastq: True
+    paired: True
+    star_2pass: False
+    rsem: False
+    dexseq: False
+
+
+samples: '/DATA/projects/j.bhin/Daniel_FGFR2/FM_pdx/pipeline/samples.test.csv'
+
+################################################################################
+# Path configuration                                                           
+################################################################################
+
+path:
+    default: '/DATA/projects/j.bhin/Daniel_FGFR2/FM_pdx/AZ_TNBC'
+
+################################################################################
+# Rules
+################################################################################
+
+sort_bam:
+    threads: 12
+
+bam2fastq:
+    threads: 4
+    options:
+
+cutadapt:
+    threads: 4
+    options:
+        - -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA # ILLUMINA TrueSeq R1
+        - -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT # ILLUMINA TrueSeq R2 for paired-seq
+        - --minimum-length 30
+        - -q 20
+
+# using CTAT library from Broad institute
+star_align:
+    # index: '/DATA/projects/j.bhin/reference/GRCh38_v27_CTAT_lib_Feb092018/ctat_genome_lib_build_dir/ref_genome.fa.star.idx' 
+    index_host : '/DATA/projects/j.bhin/reference/Mouse_M16_CTAT_lib_Feb202018/ctat_genome_lib_build_dir/ref_genome.fa.star.idx' 
+    index_graft: '/DATA/projects/j.bhin/reference/GRCh38_v27_CTAT_lib_Feb092018/ctat_genome_lib_build_dir/ref_genome.fa.star.idx' 
+    # gtf: '/DATA/projects/j.bhin/reference/GRCh38_v27_CTAT_lib_Feb092018/ctat_genome_lib_build_dir/ref_annot.gtf'
+    # fasta: '/DATA/projects/j.bhin/reference/GRCh38_v27_CTAT_lib_Feb092018/ctat_genome_lib_build_dir/ref_genome.fa'
+    threads: 8
+#    threads_indexing : 24 
+    options:
+        - --chimSegmentMin 10
+        - --chimOutType Junctions
+#    - --quantMode TranscriptomeSAM  # for RSEM
+
+
+sambamba_sort:
+    threads: 4
+    options:
+
+sambamba_index:
+    threads: 4
+    options:
+
+
+disambiguate:
+    algorithm : 'STAR'
+    options:
+
+
+#rsem_reference: 
+#  fa: /home/j.bhin/Resources/mouse_GRCm38/STAR_index/Mus_musculus.GRCm38.dna.primary_assembly.fa
+#  gtf: /home/j.bhin/Resources/mouse_GRCm38/STAR_index/Mus_musculus.GRCm38.76.gtf
+#  prefix: /home/j.bhin/Resources/mouse_GRCm38/rsem_reference/GRCm38
+#  threads: 12
+#  options:
+
+
+#rsem_quant:
+#  ref: /home/j.bhin/Resources/mouse_GRCm38/rsem_reference/GRCm38
+#  threads: 12
+#  options:
+#    - --paired-end
+#    - --forward-prob 0 # strand-specific (reverse: 0, forward: 1)
+#    - --no-bam-output
+
+
+featureCounts:
+  gtf: '/DATA/projects/j.bhin/reference/GRCh38_v27_CTAT_lib_Feb092018/ctat_genome_lib_build_dir/ref_annot.gtf'
+  threads: 8
+  options:
+    - -p # pair-end
+    - -s 0 # 0: unstranded, 1: stranded, 2: reversely stranded
+    - -O # consider the reads or read-pairs that overlaps with multiple exons or genes
+
+
+#DEXseq:
+#  gtf: /home/j.bhin/Resources/mouse_GRCm38/STAR_index/Mus_musculus.GRCm38.76.gtf
+#  prefix: /home/j.bhin/Resources/mouse_GRCm38/DEXSeq/GRCm38_dexseq
+#  options:
+#    - -p yes # paired-end data
+#    - -r pos # sorted by alignment position
+#    - -s reverse # "yes": forward, "reverse": reverse, "no": unstranded
+#    - -f bam # input is bam format
+#
+
